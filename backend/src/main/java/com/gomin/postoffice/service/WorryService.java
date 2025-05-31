@@ -1,10 +1,11 @@
 package com.gomin.postoffice.service;
 
-import com.gomin.postoffice.config.JwtConfig;
 import com.gomin.postoffice.entity.Worry;
+import com.gomin.postoffice.entity.Response;
+import com.gomin.postoffice.entity.Volunteer;
 import com.gomin.postoffice.repository.WorryRepository;
+import com.gomin.postoffice.repository.ResponseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,44 +14,61 @@ import java.util.Optional;
 @Service
 public class WorryService {
 
-    private final WorryRepository worryRepository;
-    // PasswordEncoder와 JwtConfig는 현재 WorryService의 핵심 로직에 직접 사용되지 않으므로 제거하거나 필요에 따라 주입받도록 수정합니다.
-    // private final PasswordEncoder passwordEncoder;
-    // private final JwtConfig jwtConfig;
+    @Autowired
+    private WorryRepository worryRepository;
 
     @Autowired
-    public WorryService(WorryRepository worryRepository) {
-        this.worryRepository = worryRepository;
-    }
+    private ResponseRepository responseRepository;
 
-    public Worry saveWorry(Worry worry) {
-        // Note: Password hashing for Worry should be handled before saving, possibly in a dedicated service or controller.
+    public Worry createWorry(Worry worry) {
         return worryRepository.save(worry);
-    }
-
-    public Optional<Worry> findById(Long id) {
-        return worryRepository.findById(id);
     }
 
     public List<Worry> getAllWorries() {
         return worryRepository.findAll();
     }
 
-    public Optional<Worry> checkWorry(String nickname, String password) {
-        Optional<Worry> optionalWorry = worryRepository.findByNickname(nickname);
-        if (optionalWorry.isPresent()) {
-            Worry worry = optionalWorry.get();
-            // Note: Simple password check for MVP. In production, use secure password hashing.
-            if (worry.getPassword().equals(password)) {
-                return Optional.of(worry);
-            }
-        }
-        return Optional.empty();
+    public Optional<Worry> getWorryById(Long id) {
+        return worryRepository.findById(id);
     }
 
-    // 봉사자 대시보드용 고민 목록 조회 (예시: 모든 고민 반환)
-    public List<Worry> getWorriesForVolunteer() {
-        // TODO: 실제 구현에서는 봉사자와 매칭되지 않았거나 답변이 필요한 고민만 반환하도록 필터링 필요
-        return worryRepository.findAll();
+    public List<Worry> getWorriesByNicknameAndPassword(String nickname, String password) {
+        return worryRepository.findByNicknameAndPassword(nickname, password);
+    }
+
+    public Response addResponse(Long worryId, Volunteer volunteer, String content) {
+        Optional<Worry> worryOpt = worryRepository.findById(worryId);
+        if (worryOpt.isEmpty()) {
+            throw new RuntimeException("고민을 찾을 수 없습니다.");
+        }
+
+        Worry worry = worryOpt.get();
+        Response response = new Response(worry, volunteer, content);
+        return responseRepository.save(response);
+    }
+
+    public List<Response> getResponsesByWorryId(Long worryId) {
+        return responseRepository.findByWorryId(worryId);
+    }
+
+    public List<Worry> getWorriesByStatus(String status) {
+        switch (status) {
+            case "ongoing":
+                return worryRepository.findByResponsesIsEmpty();
+            case "completed":
+                return worryRepository.findByResponsesIsNotEmpty();
+            default:
+                return worryRepository.findAll();
+        }
+    }
+
+    public Worry updateWorryStatus(Long id, String status) {
+        Optional<Worry> worryOpt = worryRepository.findById(id);
+        if (worryOpt.isEmpty()) {
+            throw new RuntimeException("고민을 찾을 수 없습니다.");
+        }
+        Worry worry = worryOpt.get();
+        worry.setStatus(status);
+        return worryRepository.save(worry);
     }
 } 

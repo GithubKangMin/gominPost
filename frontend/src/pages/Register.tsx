@@ -1,11 +1,9 @@
-'use client';
-
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-export default function Register() {
-  const router = useRouter();
+const Register: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -43,7 +41,7 @@ export default function Register() {
 
       if (response.status === 200) {
         alert('회원가입이 완료되었습니다.');
-        router.push('/login');
+        navigate('/login');
       }
     } catch (err: any) {
       if (err.response) {
@@ -149,4 +147,6 @@ export default function Register() {
       </div>
     </div>
   );
-} 
+};
+
+export default Register; 

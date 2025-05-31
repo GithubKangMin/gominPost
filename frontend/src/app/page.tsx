@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import {
   Typography,
   Box,
@@ -25,6 +26,14 @@ import {
 import EmailIcon from '@mui/icons-material/Email';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import LocalPostOfficeIcon from '@mui/icons-material/LocalPostOffice';
+
+// API 기본 설정
+const api = axios.create({
+  baseURL: 'http://localhost:8080/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 // 메인 컴포넌트
 export default function Home() {
@@ -50,6 +59,13 @@ export default function Home() {
   });
   const [checkWorryError, setCheckWorryError] = React.useState('');
   const [myWorries, setMyWorries] = React.useState<Array<typeof worries[0]>>([]);
+  const [isVolunteer, setIsVolunteer] = React.useState(false);
+  const [volunteerLoginOpen, setVolunteerLoginOpen] = React.useState(false);
+  const [volunteerLoginForm, setVolunteerLoginForm] = React.useState({
+    username: '',
+    password: '',
+  });
+  const [volunteerLoginError, setVolunteerLoginError] = React.useState('');
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -59,25 +75,71 @@ export default function Home() {
     setTabValue(0);
   };
 
-  const handleCheckWorry = () => {
+  const handleCheckWorry = async () => {
     setCheckWorryError('');
     if (!checkWorryForm.nickname || !checkWorryForm.password) {
       setCheckWorryError('닉네임과 비밀번호를 모두 입력해주세요.');
       return;
     }
 
-    const foundWorries = worries.filter(
-      worry => worry.nickname === checkWorryForm.nickname && worry.password === checkWorryForm.password
-    );
+    try {
+      const response = await api.get('/worries/check', {
+        params: {
+          nickname: checkWorryForm.nickname,
+          password: checkWorryForm.password,
+        },
+      });
 
-    if (foundWorries.length === 0) {
+      setMyWorries(response.data);
+      setCheckWorryOpen(false);
+      setTabValue(1);
+    } catch (error) {
       setCheckWorryError('일치하는 고민을 찾을 수 없습니다.');
+    }
+  };
+
+  const handleVolunteerLogin = async () => {
+    setVolunteerLoginError('');
+    if (!volunteerLoginForm.username || !volunteerLoginForm.password) {
+      setVolunteerLoginError('아이디와 비밀번호를 모두 입력해주세요.');
       return;
     }
 
-    setMyWorries(foundWorries);
-    setCheckWorryOpen(false);
-    setTabValue(1); // 고민 답변 확인 탭으로 이동
+    try {
+      const response = await api.post('/auth/login', {
+        username: volunteerLoginForm.username,
+        password: volunteerLoginForm.password,
+      });
+
+      if (response.data) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('volunteer', JSON.stringify(response.data));
+        setIsVolunteer(true);
+        setVolunteerLoginOpen(false);
+        setTabValue(1);
+
+        // 고민 목록 가져오기
+        try {
+          const worriesResponse = await api.get('/worries', {
+            headers: {
+              'Authorization': `Bearer ${response.data.token}`,
+            },
+          });
+          setWorries(worriesResponse.data);
+        } catch (error) {
+          console.error('고민 목록을 가져오는데 실패했습니다:', error);
+        }
+      } else {
+        setVolunteerLoginError('로그인에 실패했습니다.');
+      }
+    } catch (error) {
+      setVolunteerLoginError('아이디 또는 비밀번호가 일치하지 않습니다.');
+    }
+  };
+
+  const handleVolunteerLogout = () => {
+    setIsVolunteer(false);
+    setTabValue(0);
   };
 
   const categories = [
@@ -107,33 +169,33 @@ export default function Home() {
       setError('');
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
       setError('');
       if (!formData.nickname || !formData.password || !formData.content || !selectedCategory) {
         setError('모든 필드를 입력해주세요.');
         return;
       }
 
-      const newWorry = {
-        id: Date.now(),
-        nickname: formData.nickname,
-        password: formData.password,
-        category: selectedCategory,
-        content: formData.content,
-        createdAt: new Date().toISOString(),
-        responses: []
-      };
+      try {
+        const response = await api.post('/worries', {
+          nickname: formData.nickname,
+          password: formData.password,
+          category: selectedCategory,
+          content: formData.content,
+        });
 
-      setWorries(prev => [...prev, newWorry]);
-      alert('고민이 성공적으로 저장되었습니다.');
-      
-      // 폼 초기화
-      setFormData({
-        nickname: '',
-        password: '',
-        content: '',
-      });
-      setSelectedCategory('');
+        alert('고민이 성공적으로 저장되었습니다.');
+        
+        // 폼 초기화
+        setFormData({
+          nickname: '',
+          password: '',
+          content: '',
+        });
+        setSelectedCategory('');
+      } catch (error) {
+        setError('고민 저장 중 오류가 발생했습니다.');
+      }
     };
 
     return (
@@ -231,18 +293,42 @@ export default function Home() {
   };
 
   // VolunteersTab 컴포넌트
-  const VolunteersTab = ({ myWorries }: { myWorries: Array<{
-    id: number;
-    nickname: string;
-    category: string;
-    content: string;
-    createdAt: string;
-    responses: Array<{
+  const VolunteersTab = ({ 
+    myWorries, 
+    isVolunteer,
+    volunteerLoginForm,
+    worries 
+  }: { 
+    myWorries: Array<{
       id: number;
+      nickname: string;
+      category: string;
       content: string;
       createdAt: string;
+      responses: Array<{
+        id: number;
+        content: string;
+        createdAt: string;
+      }>;
     }>;
-  }> }) => {
+    isVolunteer: boolean;
+    volunteerLoginForm: {
+      username: string;
+      password: string;
+    };
+    worries: Array<{
+      id: number;
+      nickname: string;
+      category: string;
+      content: string;
+      createdAt: string;
+      responses: Array<{
+        id: number;
+        content: string;
+        createdAt: string;
+      }>;
+    }>;
+  }) => {
     const [selectedStatus, setSelectedStatus] = React.useState('all');
     const [responseText, setResponseText] = React.useState('');
     const [error, setError] = React.useState('');
@@ -255,7 +341,7 @@ export default function Home() {
       { id: 'completed', name: '완료' }
     ];
 
-    const handleResponseSubmit = () => {
+    const handleResponseSubmit = async () => {
       setError('');
       if (!responseText.trim()) {
         setError('답변 내용을 입력해주세요.');
@@ -267,42 +353,49 @@ export default function Home() {
         return;
       }
 
-      const newResponse = {
-        id: Date.now(),
-        content: responseText,
-        createdAt: new Date().toISOString()
-      };
+      try {
+        const response = await api.post(`/worries/${selectedWorryId}/responses`, {
+          content: responseText,
+        }, {
+          headers: {
+            'Authorization': `Basic ${btoa(`${volunteerLoginForm.username}:${volunteerLoginForm.password}`)}`,
+          },
+        });
 
-      setWorries(prev => prev.map(worry => 
-        worry.id === selectedWorryId
-          ? { ...worry, responses: [...worry.responses, newResponse] }
-          : worry
-      ));
-
-      alert('답변이 성공적으로 저장되었습니다.');
-      setResponseText('');
+        alert('답변이 성공적으로 저장되었습니다.');
+        setResponseText('');
+        setSelectedWorryId(null);
+      } catch (error) {
+        setError('답변 저장 중 오류가 발생했습니다.');
+      }
     };
 
-    const filteredWorries = myWorries.length > 0 ? myWorries : worries.filter(worry => {
+    const filteredWorries = myWorries.length > 0 ? myWorries : (Array.isArray(worries) ? worries.filter(worry => {
       if (selectedStatus === 'all') return true;
       if (selectedStatus === 'ongoing') return worry.responses.length === 0;
       if (selectedStatus === 'completed') return worry.responses.length > 0;
       return true;
-    });
+    }) : []);
 
     return (
       <Container maxWidth="md">
         <Box sx={{ py: 3 }}>
           <Typography variant="h4" component="h1" gutterBottom>
-            {myWorries.length > 0 ? '내 고민 확인' : '고민 답변 확인'}
+            {myWorries.length > 0 
+              ? '내 고민 확인' 
+              : isVolunteer 
+                ? '고민 답변하기' 
+                : '고민 답변 확인'}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             {myWorries.length > 0 
               ? '내가 작성한 고민과 답변을 확인하세요.'
-              : '고민 답변에 대한 답변 현황입니다. 봉사자들의 답장을 확인해보세요.'}
+              : isVolunteer
+                ? '고민자들의 고민에 답변을 작성해주세요.'
+                : '고민 답변에 대한 답변 현황입니다. 봉사자들의 답장을 확인해보세요.'}
           </Typography>
           <Paper sx={{ p: 3 }}>
-            {myWorries.length === 0 && (
+            {myWorries.length === 0 && isVolunteer && (
               <>
                 <Typography variant="subtitle1" sx={{ mb: 2, color: '#e65100' }}>
                   매칭 상태
@@ -425,7 +518,7 @@ export default function Home() {
                       </>
                     )}
                   </Box>
-                  {myWorries.length === 0 && (
+                  {myWorries.length === 0 && isVolunteer && (
                     <Button
                       variant="outlined"
                       onClick={() => setSelectedWorryId(worry.id)}
@@ -549,19 +642,107 @@ export default function Home() {
           >
             고민 확인
           </Button>
-          <Button
-            color="inherit"
-            onClick={() => router.push('/login')}
-            sx={{
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.1)'
-              }
-            }}
-          >
-            봉사자 로그인
-          </Button>
+          {isVolunteer ? (
+            <Button
+              color="inherit"
+              onClick={handleVolunteerLogout}
+              sx={{
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              봉사자 로그아웃
+            </Button>
+          ) : (
+            <Button
+              color="inherit"
+              onClick={() => setVolunteerLoginOpen(true)}
+              sx={{
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              봉사자 로그인
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
+
+      {/* 봉사자 로그인 다이얼로그 */}
+      <Dialog 
+        open={volunteerLoginOpen} 
+        onClose={() => setVolunteerLoginOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: '#e65100' }}>
+          봉사자 로그인
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              봉사자 계정으로 로그인하여 고민에 답변하세요.
+            </Typography>
+            <TextField
+              fullWidth
+              label="아이디"
+              value={volunteerLoginForm.username}
+              onChange={(e) => setVolunteerLoginForm(prev => ({ ...prev, username: e.target.value }))}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="비밀번호"
+              type="password"
+              value={volunteerLoginForm.password}
+              onChange={(e) => setVolunteerLoginForm(prev => ({ ...prev, password: e.target.value }))}
+              sx={{ mb: 2 }}
+            />
+            {volunteerLoginError && (
+              <Typography color="error" variant="body2" sx={{ mb: 2 }}>
+                {volunteerLoginError}
+              </Typography>
+            )}
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button
+                component="a"
+                href="/register"
+                sx={{
+                  color: '#e65100',
+                  textDecoration: 'none',
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                계정이 없으신가요? 회원가입
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setVolunteerLoginOpen(false)}
+            sx={{ color: '#e65100' }}
+          >
+            취소
+          </Button>
+          <Button 
+            onClick={handleVolunteerLogin}
+            variant="contained"
+            sx={{
+              bgcolor: '#ff7043',
+              '&:hover': {
+                bgcolor: '#f4511e',
+              },
+            }}
+          >
+            로그인
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 고민 확인 다이얼로그 */}
       <Dialog 
@@ -647,13 +828,13 @@ export default function Home() {
           }}
         >
           <Tab label="고민 작성하기" />
-          <Tab label="고민 답변 확인" />
+          <Tab label={isVolunteer ? "고민 답변하기" : "고민 답변 확인"} />
           <Tab label="전문 상담 신청" />
         </Tabs>
         <Box sx={{ p: 2 }}>
-          {tabValue === 0 && <WriteWorryTab />}
-          {tabValue === 1 && <VolunteersTab myWorries={myWorries} />}
-          {tabValue === 2 && <CounselingTab />}
+          {tabValue === 0 && !isVolunteer && <WriteWorryTab />}
+          {tabValue === 1 && <VolunteersTab myWorries={myWorries} isVolunteer={isVolunteer} volunteerLoginForm={volunteerLoginForm} worries={worries} />}
+          {tabValue === 2 && !isVolunteer && <CounselingTab />}
         </Box>
       </Box>
 

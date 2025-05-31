@@ -2,6 +2,7 @@ package com.gomin.postoffice.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import java.time.LocalDateTime;
 
@@ -16,6 +17,7 @@ public class Response {
 
     @ManyToOne
     @JoinColumn(name = "worry_id", nullable = false)
+    @JsonBackReference
     private Worry worry;
 
     @ManyToOne
@@ -28,31 +30,56 @@ public class Response {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    public Response() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public Response(Worry worry, Volunteer volunteer, String content) {
+        this.worry = worry;
+        this.volunteer = volunteer;
+        this.content = content;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Worry getWorry() {
+        return worry;
+    }
+
     public void setWorry(Worry worry) {
         this.worry = worry;
+    }
+
+    public Volunteer getVolunteer() {
+        return volunteer;
     }
 
     public void setVolunteer(Volunteer volunteer) {
         this.volunteer = volunteer;
     }
 
+    public String getContent() {
+        return content;
+    }
+
     public void setContent(String content) {
         this.content = content;
     }
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    // Default constructor required by JPA
-    public Response() {}
-
-    // Constructor for creating a new Response
-    public Response(Worry worry, Volunteer volunteer, String content) {
-        this.worry = worry;
-        this.volunteer = volunteer;
-        this.content = content;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     // Helper method to get volunteer name (for simplicity, assuming Volunteer has a name or email field)

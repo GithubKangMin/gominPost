@@ -1,6 +1,5 @@
 package com.gomin.postoffice.service;
 
-import com.gomin.postoffice.config.JwtConfig;
 import com.gomin.postoffice.entity.Volunteer;
 import com.gomin.postoffice.repository.VolunteerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,46 +11,46 @@ import java.util.Optional;
 @Service
 public class VolunteerService {
 
-    private final VolunteerRepository volunteerRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtConfig jwtConfig;
+    @Autowired
+    private VolunteerRepository volunteerRepository;
 
     @Autowired
-    public VolunteerService(VolunteerRepository volunteerRepository, 
-                          PasswordEncoder passwordEncoder,
-                          JwtConfig jwtConfig) {
-        this.volunteerRepository = volunteerRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtConfig = jwtConfig;
-    }
+    private PasswordEncoder passwordEncoder;
 
-    // 봉사자 회원가입
-    public Volunteer registerVolunteer(Volunteer volunteer) {
-        // 비밀번호 해싱
+    public Volunteer register(Volunteer volunteer) {
+        // 이메일 중복 체크
+        if (volunteerRepository.findByEmail(volunteer.getEmail()).isPresent()) {
+            throw new RuntimeException("이미 등록된 이메일입니다.");
+        }
+
+        // 사용자명 중복 체크
+        if (volunteerRepository.findByUsername(volunteer.getUsername()).isPresent()) {
+            throw new RuntimeException("이미 사용 중인 사용자명입니다.");
+        }
+
+        // 비밀번호 암호화
         volunteer.setPassword(passwordEncoder.encode(volunteer.getPassword()));
+        
         return volunteerRepository.save(volunteer);
     }
 
-    // 이메일로 봉사자 찾기
-    public Optional<Volunteer> findByEmail(String email) {
-        return volunteerRepository.findByEmail(email);
+    public Volunteer login(String username, String password) {
+        Optional<Volunteer> volunteerOpt = volunteerRepository.findByUsername(username);
+        
+        if (volunteerOpt.isEmpty()) {
+            throw new RuntimeException("사용자를 찾을 수 없습니다.");
+        }
+
+        Volunteer volunteer = volunteerOpt.get();
+        
+        if (!passwordEncoder.matches(password, volunteer.getPassword())) {
+            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+        }
+
+        return volunteer;
     }
 
-    // ID로 봉사자 찾기
     public Optional<Volunteer> findById(Long id) {
         return volunteerRepository.findById(id);
-    }
-
-    // 봉사자 로그인 (Spring Security에서 처리될 수 있음)
-    // 여기서는 간단하게 비밀번호 확인만 예시
-    public String authenticate(String email, String password) {
-        Optional<Volunteer> optionalVolunteer = findByEmail(email);
-        if (optionalVolunteer.isPresent()) {
-            Volunteer volunteer = optionalVolunteer.get();
-            if (passwordEncoder.matches(password, volunteer.getPassword())) {
-                return jwtConfig.generateToken(email);
-            }
-        }
-        return null;
     }
 } 
