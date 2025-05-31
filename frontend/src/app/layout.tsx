@@ -1,19 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 // Material-UI 테마 생성
@@ -32,7 +27,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: geistSans.style.fontFamily,
+    fontFamily: inter.style.fontFamily,
   },
 });
 
@@ -43,9 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${inter.variable} antialiased`}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
           {children}

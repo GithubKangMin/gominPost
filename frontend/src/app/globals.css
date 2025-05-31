@@ -1,5 +1,11 @@
-@import "tailwindcss";
+/* src/app/globals.css */
 
+/* 1. TailwindCSS 디렉티브 (반드시 이 순서대로) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 2. 테마 변수 정의 (원래 있던 :root 부분) */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -12,6 +18,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* 3. 다크 모드 대응 */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,6 +26,7 @@
   }
 }
 
+/* 4. 기본 body 스타일 */
 body {
   background: var(--background);
   color: var(--foreground);
