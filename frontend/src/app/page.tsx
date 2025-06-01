@@ -201,9 +201,6 @@ export default function Home() {
     return (
       <Container maxWidth="md">
         <Box sx={{ py: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            고민 작성하기
-          </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             익명으로 고민을 남기고 봉사자들의 따뜻한 답장을 받아보세요.
           </Typography>
@@ -385,7 +382,7 @@ export default function Home() {
               ? '내 고민 확인' 
               : isVolunteer 
                 ? '고민 답변하기' 
-                : '고민 답변 확인'}
+                : ''}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             {myWorries.length > 0 
@@ -547,9 +544,6 @@ export default function Home() {
   const CounselingTab = () => (
     <Container maxWidth="md">
       <Box sx={{ py: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          전문 상담 신청
-        </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
           전문 상담사와 1:1 상담을 통해 더 깊이 있는 도움을 받아보세요. 전화번호 입력이 필요합니다.
         </Typography>
@@ -596,16 +590,23 @@ export default function Home() {
     {
       title: '고민 우체국이란?',
       description: '익명으로 고민을 남기고 봉사자들의 답장을 받아보세요.',
-      image: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f',
+      image: 'https://plus.unsplash.com/premium_photo-1679768606092-5043ce780f8d?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       icon: <EmailIcon sx={{ fontSize: 32 }} />,
       path: '/write'
     },
     {
-      title: '익명성이 보장되나요?',
+      title: '익명성 보장',
       description: '상담자는 로그인이 필요없고 본인이 정한 닉네임과 비밀번호만으로 고민을 남길 수 있습니다.',
-      image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f',
+      image: 'https://plus.unsplash.com/premium_photo-1674506652851-1f8426f4ac39?q=80&w=3474&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       icon: <VolunteerActivismIcon sx={{ fontSize: 32 }} />,
       path: '/volunteers'
+    },
+    {
+      title: '프로젝트 정보',
+      description: '가톨릭대학교 키스톤 아이들 조에서 기획하고 제작된 프로젝트입니다.',
+      image: 'https://search.pstatic.net/common/?src=http%3A%2F%2Fcafefiles.naver.net%2FMjAxOTEwMjdfMjkw%2FMDAxNTcyMTA3NTc0MTQ3.EikIJyVsX_nl-PgAh6gCIqd-oo76rjhqBwiiWZDmo7Eg.m6ihl1TJPP2PHjZQ-glT_mM8p7aWWFnMwURipNQjJckg.PNG%2F%25BE%25C6%25B8%25E0.png&type=a340',
+      icon: <LocalPostOfficeIcon sx={{ fontSize: 32 }} />,
+      path: '#' // 특정 페이지로 이동하지 않으면 #으로 설정
     }
   ];
 
@@ -850,7 +851,7 @@ export default function Home() {
             고민우체국
           </Typography>
           <Typography variant="h6" align="center" color="#bf360c" paragraph>
-            익명으로 고민을 남기고, 봉사자들의 따뜻한 답장을 받아보세요.
+            익명으로 고민을 남기고, 봉사자들의 답장을 받아보세요.
             당신의 이야기를 들어주는 따뜻한 공간입니다.
           </Typography>
           <Box sx={{ mt: 3 }}>
@@ -862,7 +863,7 @@ export default function Home() {
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
-                      cursor: 'pointer',
+                      cursor: 'default',
                       transition: 'transform 0.2s',
                       '&:hover': {
                         transform: 'translateY(-4px)',
@@ -870,11 +871,10 @@ export default function Home() {
                       },
                       border: '1px solid #fff3e0',
                     }}
-                    onClick={() => router.push(section.path)}
                   >
                     <CardMedia
                       component="img"
-                      height="140"
+                      height={180}
                       image={section.image}
                       alt={section.title}
                       sx={{
