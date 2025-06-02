@@ -2,6 +2,7 @@ package com.gomin.postoffice.controller;
 
 import com.gomin.postoffice.entity.Response;
 import com.gomin.postoffice.entity.Volunteer;
+import com.gomin.postoffice.service.GptService;
 import com.gomin.postoffice.service.ResponseService;
 import com.gomin.postoffice.service.VolunteerService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,11 +39,18 @@ class AddResponseRequest {
 @CrossOrigin(origins = "http://localhost:3000")
 public class ResponseController {
 
-    @Autowired
-    private ResponseService responseService;
+    private final ResponseService responseService;
+    private final VolunteerService volunteerService;
+    private final GptService gptService;
 
     @Autowired
-    private VolunteerService volunteerService;
+    public ResponseController(ResponseService responseService, 
+                            VolunteerService volunteerService,
+                            GptService gptService) {
+        this.responseService = responseService;
+        this.volunteerService = volunteerService;
+        this.gptService = gptService;
+    }
 
     @PostMapping
     public ResponseEntity<?> createResponse(@RequestBody Map<String, Object> payload) {
@@ -53,6 +61,11 @@ public class ResponseController {
 
             if (content == null || content.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("응답 내용을 입력해주세요.");
+            }
+
+            // GPT 검토
+            if (!gptService.reviewContent(content)) {
+                return ResponseEntity.badRequest().body("응답 내용이 가이드라인에 부합하지 않습니다.");
             }
 
             Volunteer volunteer = volunteerService.findById(volunteerId)
